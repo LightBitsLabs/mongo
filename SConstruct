@@ -1423,6 +1423,8 @@ if env.TargetOSIs('posix'):
                          "-fno-strict-aliasing",
                          "-ggdb",
                          "-pthread",
+                         "-lmemcached",
+                         "-lmemcachedutil",
                          "-Wall",
                          "-Wsign-compare",
                          "-Wno-unknown-pragmas",
@@ -1433,7 +1435,7 @@ if env.TargetOSIs('posix'):
             env.Append( CCFLAGS=["-Werror"] )
 
     env.Append( CXXFLAGS=["-Wnon-virtual-dtor", "-Woverloaded-virtual"] )
-    env.Append( LINKFLAGS=["-fPIC", "-pthread"] )
+    env.Append( LINKFLAGS=["-fPIC", "-pthread", "-lmemcached", "-lmemcachedutil"] )
 
     # SERVER-9761: Ensure early detection of missing symbols in dependent libraries at program
     # startup.
