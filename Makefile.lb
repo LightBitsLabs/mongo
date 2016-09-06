@@ -1,0 +1,40 @@
+include $(WORKSPACE_TOP)/common/Makefile.env
+
+MONGO_STOCK_COMPONENT_PATH := $(shell component-tool localpath --repo=mongo mongo_stock)
+MONGO_LB_COMPONENT_PATH := $(shell component-tool localpath --repo=mongo mongo_lb)
+
+all: build
+
+build:
+	echo $(LIBMEMCACHE_INC)
+	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb -j 4 static_lib
+	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb install
+	mkdir -p $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/
+	ln -sf $(WORKSPACE_TOP)/mongo-rocks $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/rocks
+	scons -j 4 CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
+	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
+	rm -fr ./build
+
+	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb -j 4 static_lib
+	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb install
+	scons -j 4 CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
+	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_stock
+
+install:
+	$(Q)mkdir -p $(MONGO_STOCK_COMPONENT_PATH)
+	$(Q)cp ./mongod_stock $(MONGO_STOCK_COMPONENT_PATH)
+	$(Q)mkdir -p $(MONGO_LB_COMPONENT_PATH)
+	$(Q)cp ./mongod_lb $(MONGO_LB_COMPONENT_PATH)
+
+checkin:
+	$(Q)component-tool checkin -v --repo=mongo mongo_stock
+	$(Q)component-tool checkin -v --repo=mongo mongo_lb
+
+clean:
+	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb clean
+	scons -c
+	$(Q)rm -f ./src/mongo/db/modules/rocks
+	rm -f ./mongod ./mongod_stock ./mongod_lb
+	rm -fr ./build
+
+.PHONY: clean build
