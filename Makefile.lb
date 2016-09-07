@@ -13,14 +13,14 @@ build:
 	mkdir -p $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/
 	ln -sf $(WORKSPACE_TOP)/mongo-rocks $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/rocks
 	scons -j 4 CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
-	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
+	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_stock
 
 
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
 	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb -j 4 static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb install
 	scons -j 4 CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
-	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_stock
+	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
 
 install:
 	$(Q)mkdir -p $(MONGO_STOCK_COMPONENT_PATH)
