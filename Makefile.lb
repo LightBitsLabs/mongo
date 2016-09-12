@@ -23,10 +23,10 @@ build:
 	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
 
 install:
-	$(Q)mkdir -p $(MONGO_STOCK_COMPONENT_PATH)
-	$(Q)cp ./mongod_stock $(MONGO_STOCK_COMPONENT_PATH)
-	$(Q)mkdir -p $(MONGO_LB_COMPONENT_PATH)
-	$(Q)cp ./mongod_lb $(MONGO_LB_COMPONENT_PATH)
+	$(Q)mkdir -p $(MONGO_STOCK_COMPONENT_PATH)/usr/bin
+	$(Q)cp ./mongod_stock $(MONGO_STOCK_COMPONENT_PATH)/usr/bin
+	$(Q)mkdir -p $(MONGO_LB_COMPONENT_PATH)/usr/bin
+	$(Q)cp ./mongod_lb $(MONGO_LB_COMPONENT_PATH)/usr/bin
 
 checkin:
 	$(Q)component-tool checkin -v --repo=mongo mongo_stock
