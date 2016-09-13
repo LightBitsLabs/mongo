@@ -165,3 +165,5 @@ buildinfo.cpp
 DriverInclude.wxs
 
 compile_commands.json
+mongod_lb
+mongod_stock
