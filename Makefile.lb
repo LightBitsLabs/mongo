@@ -1,7 +1,7 @@
 include $(WORKSPACE_TOP)/common/Makefile.env
 
-MONGO_STOCK_COMPONENT_PATH := $(shell component-tool localpath --repo=mongo mongo_stock)
-MONGO_LB_COMPONENT_PATH := $(shell component-tool localpath --repo=mongo mongo_lb)
+MONGO_STOCK_COMPONENT_PATH := $(shell component-tool localpath --repo=mongo --type=$(BUILDTYPE) mongo_stock)
+MONGO_LB_COMPONENT_PATH := $(shell component-tool localpath --repo=mongo --type=$(BUILDTYPE) mongo_lb)
 
 all: build
 
@@ -36,7 +36,7 @@ install_mongo_lb:
 install: install_mongo_stock install_mongo_lb
 
 checkin_%:
-	$(Q)component-tool checkin -v --repo=mongo $*
+	$(Q)component-tool checkin -v --repo=mongo --type=$(BUILDTYPE) $*
 
 checkin: checkin_mongo_lb checkin_mongo_stock
 
