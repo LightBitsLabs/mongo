@@ -1,7 +1,7 @@
 mongo:
-  mongo_stock:
+  mongod_stock:
     - common:user
     - file://.
-  mongo_lb:
+  mongod_lb:
     - common:user
     - file://.
