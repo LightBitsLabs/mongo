@@ -8,6 +8,7 @@ all: build
 build_mongod_stock:
 	echo "Building :" $(MONGO_STOCK_COMPONENT_PATH)
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
+	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb clean
 	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(MAKE) -C $(WORKSPACE_TOP)/rocksdb -j 8 static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb install
 	mkdir -p $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/
@@ -18,6 +19,7 @@ build_mongod_stock:
 build_mongod_lb:
 	echo "Building :" $(MONGO_LB_COMPONENT_PATH)
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
+	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb clean
 	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb -j 8 static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb install
 	scons -j 8 CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
