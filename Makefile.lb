@@ -34,6 +34,7 @@ build_mongod_lb:
 	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb clean
 	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb install
+	ln -sf $(WORKSPACE_TOP)/mongo-rocks $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/rocks
 	scons $(JOB_FLAG) $(MONGO_DEBUG) CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
 	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
 
