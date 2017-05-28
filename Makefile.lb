@@ -13,15 +13,18 @@ ROCKSDB_MAKE := $(MAKE)
 MONGO_DEBUG :=
 endif
 
+MAKE_PID := $(shell echo $$PPID)
+JOB_FLAG := $(filter -j%, $(subst -j ,-j,$(shell ps T | grep "^\s*$(MAKE_PID).*$(MAKE)")))
+
 build_mongod_stock:
 	echo "Building :" $(MONGO_STOCK_COMPONENT_PATH)
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
 	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb clean
-	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(ROCKSDB_MAKE) -C $(WORKSPACE_TOP)/rocksdb -j 8 static_lib
+	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(ROCKSDB_MAKE) -C $(WORKSPACE_TOP)/rocksdb static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb install
 	mkdir -p $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/
 	ln -sf $(WORKSPACE_TOP)/mongo-rocks $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/rocks
-	scons -j 8 $(MONGO_DEBUG) CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib core
+	scons $(JOB_FLAG) $(MONGO_DEBUG) CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib core
 	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_stock
 
 
@@ -29,9 +32,9 @@ build_mongod_lb:
 	echo "Building :" $(MONGO_LB_COMPONENT_PATH)
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
 	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb clean
-	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb -j 8 static_lib
+	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb install
-	scons -j 8 $(MONGO_DEBUG) CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
+	scons $(JOB_FLAG) $(MONGO_DEBUG) CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
 	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
 
 build: build_mongod_stock build_mongod_lb
