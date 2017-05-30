@@ -39,7 +39,9 @@ build_mongod_lb:
 	scons $(JOB_FLAG) $(MONGO_DEBUG) CPPPATH=$(WORKSPACE_TOP)/mongo/build/include LIBPATH=$(WORKSPACE_TOP)/mongo/build/lib mongod
 	mv $(WORKSPACE_TOP)/mongo/mongod $(WORKSPACE_TOP)/mongo/mongod_lb
 
-build: build_mongod_stock build_mongod_lb
+build:
+	$(MAKE) $(JOB_FLAG) -f Makefile.lb build_mongod_stock
+	$(MAKE) $(JOB_FLAG) -f Makefile.lb build_mongod_lb
 
 install_mongod_stock:
 	$(Q)mkdir -p $(MONGO_STOCK_COMPONENT_PATH)/$(MONGO_INSTALL_DIR)
