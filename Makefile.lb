@@ -20,7 +20,7 @@ build_mongod_stock:
 	echo "Building :" $(MONGO_STOCK_COMPONENT_PATH)
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
 	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb clean
-	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(ROCKSDB_MAKE) -C $(WORKSPACE_TOP)/rocksdb $(JOB_FLAG) static_lib
+	USE_SSE=1 $(ROCKSDB_MAKE) -C $(WORKSPACE_TOP)/rocksdb $(JOB_FLAG) static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb install
 	mkdir -p $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/
 	ln -sf $(WORKSPACE_TOP)/mongo-rocks $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/rocks
@@ -32,7 +32,7 @@ build_mongod_lb:
 	echo "Building :" $(MONGO_LB_COMPONENT_PATH)
 	rm -fr ${WORKSPACE_TOP}/mongo/build/include $(WORKSPACE_TOP)/mongo/build/lib $(WORKSPACE_TOP)/mongo/build/opt/mongo/mongod
 	$(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb clean
-	CFLAGS=-fPIC CXXFLAGS=-fPIC USE_SSE=1 $(ROCKSDB_MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb  $(JOB_FLAG) static_lib
+	USE_SSE=1 $(ROCKSDB_MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb  $(JOB_FLAG) static_lib
 	INSTALL_PATH=$(WORKSPACE_TOP)/mongo/build $(MAKE) -C $(WORKSPACE_TOP)/rocksdb-lb install
 	mkdir -p $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/
 	ln -sf $(WORKSPACE_TOP)/mongo-rocks $(WORKSPACE_TOP)/mongo/src/mongo/db/modules/rocks
