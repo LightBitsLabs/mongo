@@ -35,12 +35,17 @@
 #include "mongo/db/storage/kv/kv_engine.h"
 #include "mongo/db/storage/recovery_unit_noop.h"
 
+#include <libmemcached/memcached.h>
+#include <libmemcached/util.h>
+
+
 namespace mongo {
 
 class JournalListener;
 
 class DevNullKVEngine : public KVEngine {
 public:
+    DevNullKVEngine();
     virtual ~DevNullKVEngine() {}
 
     virtual RecoveryUnit* newRecoveryUnit() {
@@ -114,5 +119,7 @@ public:
 
 private:
     std::shared_ptr<void> _catalogInfo;
+    memcached_st* memc;
+    memcached_pool_st* memcached_pool;
 };
 }

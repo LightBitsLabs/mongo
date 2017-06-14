@@ -35,31 +35,156 @@
 #include "mongo/db/storage/record_store.h"
 #include "mongo/db/storage/sorted_data_interface.h"
 #include "mongo/stdx/memory.h"
+#include "mongo/bson/bsonobj.h"
+#include "mongo/db/storage/key_string.h"
+#include "mongo/db/index/index_descriptor.h"
+
+
+mongo::BSONObj stripFieldNames( const mongo::BSONObj& obj ) {
+	mongo::BSONObjBuilder b;
+	mongo::BSONObjIterator i( obj );
+   while ( i.more() ) {
+	   mongo::BSONElement e = i.next();
+	   b.appendAs( e, "" );
+   }
+   return b.obj();
+}
 
 namespace mongo {
 
 class EmptyRecordCursor final : public SeekableRecordCursor {
 public:
+    EmptyRecordCursor(memcached_pool_st *pool):_memcached_pool(pool){
+
+    }
     boost::optional<Record> next() final {
         return {};
     }
     boost::optional<Record> seekExact(const RecordId& id) final {
-        return {};
+	   memcached_return_t rc;
+	   auto memc = memcached_pool_pop(_memcached_pool, true, &rc);
+	   assert(rc == 0);
+
+	   std::string key = std::to_string(id.repr());
+	   size_t val_len;
+	   char *value =  memcached_get(memc, key.c_str(), key.length(), &val_len, nullptr, &rc);
+
+	   memcached_pool_push(_memcached_pool, memc);
+	   Record result = {id, {value, static_cast<int>(val_len)}};
+
+	   // copy the result
+	   result.data.makeOwned();
+	   free(value);
+	   return result;
     }
+
     void save() final {}
     bool restore() final {
         return true;
     }
     void detachFromOperationContext() final {}
     void reattachToOperationContext(OperationContext* txn) final {}
+
+private :
+    memcached_pool_st *_memcached_pool;
+};
+
+
+class MemcachedCursor final : public SortedDataInterface::Cursor {
+public:
+	MemcachedCursor(memcached_pool_st* memcached_pool, Ordering order):_memcached_pool(memcached_pool), _order(order), _query(KeyString::Version::V1){}
+
+	virtual boost::optional<IndexKeyEntry> seekExact(const BSONObj& key,
+	                                                 RequestedInfo parts = kKeyAndLoc) {
+		_query.resetToKey(stripFieldNames(key), _order);
+		std::string searchKey(_query.getBuffer(), _query.getSize());
+		 memcached_return_t rc;
+		auto memc = memcached_pool_pop(_memcached_pool, true, &rc);
+		assert(rc == 0);
+
+
+		size_t val_len;
+		char *value =  memcached_get(memc, searchKey.c_str(), searchKey.length(), &val_len, nullptr, &rc);
+
+		BufReader br(value, val_len);
+		auto rec_id = KeyString::decodeRecordId(&br);
+
+		_value = value;
+		free(value);
+		memcached_pool_push(_memcached_pool, memc);
+
+		return IndexKeyEntry(key, rec_id);
+
+	}
+
+	 virtual void setEndPosition(const BSONObj& key, bool inclusive)
+	 {
+		 assert(0);
+	 }
+
+
+	 virtual boost::optional<IndexKeyEntry> next(RequestedInfo parts = kKeyAndLoc)
+	 {
+		 assert(0);
+		 return {};
+	 }
+
+	 virtual boost::optional<IndexKeyEntry> seek(const BSONObj& key,
+						    bool inclusive,
+						    RequestedInfo parts = kKeyAndLoc)
+	 {
+		 assert(0);
+		 return {};
+	 }
+
+
+	virtual boost::optional<IndexKeyEntry> seek(const IndexSeekPoint& seekPoint,
+						    RequestedInfo parts = kKeyAndLoc)
+	{
+		assert(0);
+		return {};
+	}
+
+
+	 virtual void save()
+	 {
+		 assert(0);
+	 }
+
+
+	 virtual void restore()
+	 {
+		 assert(0);
+	 }
+
+
+	 virtual void detachFromOperationContext()
+	 {
+		 assert(0);
+	 }
+
+	 virtual void reattachToOperationContext(OperationContext* opCtx)
+	 {
+		 assert(0);
+	 }
+
+private:
+	memcached_pool_st* _memcached_pool;
+	Ordering _order;
+	KeyString _query;
+	std::string _value;
+
 };
 
 class DevNullRecordStore : public RecordStore {
 public:
-    DevNullRecordStore(StringData ns, const CollectionOptions& options)
+    DevNullRecordStore(memcached_pool_st* memcached_pool, StringData ns, const CollectionOptions& options)
         : RecordStore(ns), _options(options) {
         _numInserts = 0;
         _dummy = BSON("_id" << 1);
+        _nextIdNum.store(1);
+        _memcached_pool = memcached_pool;
+
     }
 
     virtual const char* name() const {
@@ -96,12 +221,24 @@ public:
 
     virtual void deleteRecord(OperationContext* txn, const RecordId& dl) {}
 
+
     virtual StatusWith<RecordId> insertRecord(OperationContext* txn,
                                               const char* data,
                                               int len,
                                               bool enforceQuota) {
         _numInserts++;
-        return StatusWith<RecordId>(RecordId(6, 4));
+        RecordId rec_info(_nextIdNum.fetchAndAdd(1));
+        memcached_return_t rc;
+
+        auto memc = memcached_pool_pop(_memcached_pool, true, &rc);
+        assert(rc == 0);
+
+        std::string key = std::to_string(rec_info.repr());
+
+        rc = memcached_set(memc, key.c_str(), key.length(), data, len, 0 , 0);
+        assert(rc == 0 || rc == MEMCACHED_BUFFERED);
+        memcached_pool_push(_memcached_pool, memc);
+        return StatusWith<RecordId>(rec_info);
     }
 
     virtual Status insertRecordsWithDocWriter(OperationContext* txn,
@@ -123,7 +260,18 @@ public:
                                 int len,
                                 bool enforceQuota,
                                 UpdateNotifier* notifier) {
-        return Status::OK();
+
+	    memcached_return_t rc;
+
+	    auto memc = memcached_pool_pop(_memcached_pool, true, &rc);
+	    assert(rc == 0);
+
+	    std::string key = std::to_string(oldLocation.repr());
+
+	    rc = memcached_set(memc, key.c_str(), key.length(), data, len, 0 , 0);
+	    assert(rc == 0 || rc == MEMCACHED_BUFFERED);
+	    memcached_pool_push(_memcached_pool, memc);
+	    return Status::OK();
     }
 
     virtual bool updateWithDamagesSupported() const {
@@ -141,7 +289,7 @@ public:
 
     std::unique_ptr<SeekableRecordCursor> getCursor(OperationContext* txn,
                                                     bool forward) const final {
-        return stdx::make_unique<EmptyRecordCursor>();
+        return stdx::make_unique<EmptyRecordCursor>(_memcached_pool);
     }
 
     virtual Status truncate(OperationContext* txn) {
@@ -177,7 +325,9 @@ public:
 private:
     CollectionOptions _options;
     long long _numInserts;
+    AtomicUInt64 _nextIdNum;
     BSONObj _dummy;
+    memcached_pool_st* _memcached_pool;
 };
 
 class DevNullSortedDataBuilderInterface : public SortedDataBuilderInterface {
@@ -193,6 +343,7 @@ public:
 
 class DevNullSortedDataInterface : public SortedDataInterface {
 public:
+    DevNullSortedDataInterface( memcached_pool_st* memcached_pool, Ordering order) : _memcached_pool(memcached_pool), _order(order){}
     virtual ~DevNullSortedDataInterface() {}
 
     virtual SortedDataBuilderInterface* getBulkBuilder(OperationContext* txn, bool dupsAllowed) {
@@ -203,7 +354,22 @@ public:
                           const BSONObj& key,
                           const RecordId& loc,
                           bool dupsAllowed) {
-        return Status::OK();
+
+	    memcached_return_t rc;
+	    KeyString encodedKey(KeyString::Version::V1, key, _order);
+
+	    auto memc = memcached_pool_pop(_memcached_pool, true, &rc);
+	    assert(rc == 0);
+
+
+	    KeyString value(KeyString::Version::V1, loc);
+	   // if (!encodedKey.getTypeBits().isAllZeros()) {
+	    	    value.appendTypeBits(encodedKey.getTypeBits());
+	    //}
+ 	    rc = memcached_set(memc, encodedKey.getBuffer(), encodedKey.getSize(), value.getBuffer(), value.getSize(), 0 , 0);
+            assert(rc == 0 || rc == MEMCACHED_BUFFERED);
+            memcached_pool_push(_memcached_pool, memc);
+            return Status::OK();
     }
 
     virtual void unindex(OperationContext* txn,
@@ -235,14 +401,32 @@ public:
 
     virtual std::unique_ptr<SortedDataInterface::Cursor> newCursor(OperationContext* txn,
                                                                    bool isForward) const {
-        return {};
+	    return stdx::make_unique<MemcachedCursor>(_memcached_pool, _order);
     }
 
     virtual Status initAsEmpty(OperationContext* txn) {
         return Status::OK();
     }
+    memcached_pool_st* _memcached_pool;
+    Ordering _order;
 };
 
+DevNullKVEngine::DevNullKVEngine(){
+	std::string lightbox_config = std::string("--SERVER=") + std::string(getenv( "KV_IPADDR" ) ?: "");
+	memc = memcached(lightbox_config.c_str(), lightbox_config.length());
+	memcached_return_t rc;
+
+	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_TCP_NODELAY, 1);
+	assert(rc == 0);
+	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_BINARY_PROTOCOL, 1);
+	assert(rc == 0);
+	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_NOREPLY, 1);
+	assert(rc == 0);
+
+	assert(memc);
+	memcached_pool = memcached_pool_create(memc, 10, 1000);
+	assert(memcached_pool);
+}
 
 std::unique_ptr<RecordStore> DevNullKVEngine::getRecordStore(OperationContext* opCtx,
                                                              StringData ns,
@@ -251,12 +435,12 @@ std::unique_ptr<RecordStore> DevNullKVEngine::getRecordStore(OperationContext* o
     if (ident == "_mdb_catalog") {
         return stdx::make_unique<EphemeralForTestRecordStore>(ns, &_catalogInfo);
     }
-    return stdx::make_unique<DevNullRecordStore>(ns, options);
+    return stdx::make_unique<DevNullRecordStore>(memcached_pool, ns, options);
 }
 
 SortedDataInterface* DevNullKVEngine::getSortedDataInterface(OperationContext* opCtx,
                                                              StringData ident,
                                                              const IndexDescriptor* desc) {
-    return new DevNullSortedDataInterface();
+    return new DevNullSortedDataInterface(memcached_pool, Ordering::make(desc->keyPattern()));
 }
 }
