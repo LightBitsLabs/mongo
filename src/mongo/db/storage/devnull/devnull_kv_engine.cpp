@@ -70,6 +70,7 @@ public:
 	   char *value =  memcached_get(memc, key.c_str(), key.length(), &val_len, nullptr, &rc);
 
 	   if (rc == MEMCACHED_NOTFOUND) {
+		memcached_pool_push(_memcached_pool, memc);
 	   	return {};
 	   }
 
@@ -111,6 +112,7 @@ public:
 		char *value =  memcached_get(memc, searchKey.c_str(), searchKey.length(), &val_len, nullptr, &rc);
 
 		if (rc == MEMCACHED_NOTFOUND) {
+			memcached_pool_push(_memcached_pool, memc);
 			return {};
 		}
 
@@ -424,8 +426,8 @@ DevNullKVEngine::DevNullKVEngine(){
 	memc = memcached(lightbox_config.c_str(), lightbox_config.length());
 	memcached_return_t rc;
 
-	/*rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_TCP_NODELAY, 1);
-	assert(rc == 0);*/
+	//rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_TCP_NODELAY, 1);
+	//assert(rc == 0);
 	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_BINARY_PROTOCOL, 1);
 	assert(rc == 0);
 	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_NOREPLY, 1);
