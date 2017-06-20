@@ -426,12 +426,12 @@ DevNullKVEngine::DevNullKVEngine(){
 	memc = memcached(lightbox_config.c_str(), lightbox_config.length());
 	memcached_return_t rc;
 
-	//rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_TCP_NODELAY, 1);
-	//assert(rc == 0);
+	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_TCP_NODELAY, 1);
+	assert(rc == 0);
 	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_BINARY_PROTOCOL, 1);
 	assert(rc == 0);
-	rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_NOREPLY, 1);
-	assert(rc == 0);
+	//rc = memcached_behavior_set(memc, MEMCACHED_BEHAVIOR_NOREPLY, 1);
+	//assert(rc == 0);
 
 	assert(memc);
 	memcached_pool = memcached_pool_create(memc, 10, 1000);
