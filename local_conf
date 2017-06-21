@@ -1,0 +1,20 @@
+net:
+  bindIp: 0.0.0.0
+  port: 27017
+processManagement:
+  fork: 'false'
+storage:
+  dbPath: /home/sashas/workspace/mongo/storage
+  engine: rocksdb
+  journal:
+    enabled: 'true'
+  rocksdb:
+    compression: none
+    configString: stats_dump_period_sec=30;max_background_flushes=2;max_write_buffer_number=16;max_background_compactions=32;level0_file_num_compaction_trigger=4;level0_slowdown_writes_trigger=20;level0_stop_writes_trigger=32;delete_obsolete_files_period_micros=10000000;max_bytes_for_level_base=268435456;write_thread_max_yield_usec=200;info_log_level=DEBUG_LEVEL
+systemLog:
+  destination: file
+  logAppend: 'false'
+  path: /home/sashas/workspace/mongo/log/mongod.log
+  quiet: 'true'
+  verbosity: 0
+
