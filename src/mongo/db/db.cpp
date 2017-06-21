@@ -1146,7 +1146,7 @@ static int mongoDbMain(int argc, char* argv[], char** envp) {
     mongo::reportEventToSystem = &mongo::reportEventToSystemImpl;
 #endif
 
-    setupSignalHandlers();
+//    setupSignalHandlers();
 
     dbExecCommand = argv[0];
 
