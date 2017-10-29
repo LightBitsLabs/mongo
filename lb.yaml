@@ -1,11 +1,17 @@
 mongo:
   mongod_stock:
-    - common:user
-    - file://.
-    - file:///rocksdb/.
-    - file:///mongo-rocks/.
+    build:
+      - make
+    install:
+      - make install
+    deps:
+      - common:user
+      - file://.
+      - file:///rocksdb/.
+      - file:///mongo-rocks/.
   mongod_lb:
-    - common:user
-    - file://.
-    - file:///rocksdb-lb/.
-    - file:///mongo-rocks/.
+    deps:
+      - common:user
+      - file://.
+      - file:///rocksdb-lb/.
+      - file:///mongo-rocks/.
