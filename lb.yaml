@@ -1,9 +1,9 @@
 mongo:
   mongod_stock:
     build:
-      - make
+      - make -f Makefile.lb
     install:
-      - make install
+      - make install -f Makefile.lb
     deps:
       - common:user
       - file://.
