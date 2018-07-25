@@ -6,12 +6,12 @@ mongo:
       - make install -f Makefile.lb
     deps:
       - common:user
+      - mongo-rocks:mongo-rocks
+      - rocksdb:rocksdb_lib
       - file://.
-      - file:///rocksdb/.
-      - file:///mongo-rocks/.
   mongod_lb:
     deps:
       - common:user
+      - rocksdb-lb:rocksdb_lib
+      - mongo-rocks:mongo-rocks
       - file://.
-      - file:///rocksdb-lb/.
-      - file:///mongo-rocks/.
